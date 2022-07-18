@@ -1,6 +1,18 @@
 package routes
 
-import "github.com/gin-gonic/gin"
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+var entryCollection *mongo.Collection = openCollection(Client, "calories")
 
 func AddEntry(c *gin.Context) {}
 
@@ -14,4 +26,23 @@ func UpdateIngredient(c *gin.Context) {}
 
 func UpdateEntry(c *gin.Context) {}
 
-func DeleteEntry(c *gin.Context) {}
+func DeleteEntry(c *gin.Context) {
+	entryID := c.Params.ByName("id")
+	docID, _ := primitive.ObjectIDFromHex(entryID)
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+
+	result, err := entryCollection.DeleteOne(ctx, bson.M{"_id": docID})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		fmt.Println(err)
+		return
+	}
+
+	defer cancel()
+
+	// if delete operation goes on well
+	c.JSON(http.StatusOK, result.DeletedCount)
+
+}
