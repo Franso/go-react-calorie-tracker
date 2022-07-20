@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var entryCollection *mongo.Collection = OpenCollection(Client, "calories")
+var validate = validator.New()
 
 func AddEntry(c *gin.Context) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
@@ -24,6 +26,7 @@ func AddEntry(c *gin.Context) {
 		fmt.Println(err)
 		return
 	}
+
 	validationErr := validate.Struct(entry)
 	if validationErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": validationErr.Error()})
@@ -101,7 +104,7 @@ func GetEntryById(c *gin.Context) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	var entry bson.M
 	if err := entryCollection.FindOne(ctx, bson.M{"_id": docID}).Decode(&entry); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		fmt.Println(err)
 		return
 	}
@@ -170,7 +173,7 @@ func UpdateEntry(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 
 	defer cancel()
